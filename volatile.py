@@ -9,16 +9,34 @@
 import alsaaudio
 import gobject
 import gtk
-import pygtk
-pygtk.require('2.0')
 
-PANEL_HEIGHT    = 22
-WINDOW_OPACITY  = 0.95
-UPDATE_INTERVAL = 250 # ms
-VOLUME_WIDTH    = 200
-VOLUME_HEIGHT   = 25
+PANEL_HEIGHT    = 22    # in pixels, negative if panel is on the bottom
+WINDOW_OPACITY  = 0.95  # 
+UPDATE_INTERVAL = 250   # in ms
+VOLUME_WIDTH    = 200   # in pixels
+VOLUME_HEIGHT   = 25    # in pixels, adjust if the widget doesn't fit
+SCROLL_BY       = 2     # increase to scroll "faster"
 
 
+def volatile():
+  init_volume()
+
+  global icon
+  icon = gtk.StatusIcon()
+  icon.connect('activate',   show_window)
+  icon.connect('popup-menu', toggle_mute)
+  icon.connect('scroll-event', on_scroll)
+  icon.timeout = gobject.timeout_add(UPDATE_INTERVAL, update_all)
+
+  update_all()
+  icon.set_visible(1)
+
+  gtk.main()
+
+
+#
+# create the slider and containing window
+#
 def init_volume():
   global window
   window = gtk.Window(gtk.WINDOW_POPUP)
@@ -28,7 +46,7 @@ def init_volume():
   slider = gtk.HScale()
   slider.set_size_request(VOLUME_WIDTH, VOLUME_HEIGHT)
   slider.set_range(0, 100)
-  slider.set_increments(-1, 12)
+  slider.set_increments(-SCROLL_BY, 12)
   slider.set_draw_value(0)
   slider.connect('value-changed', on_slide)
 
@@ -38,8 +56,10 @@ def init_volume():
   window.add(frame)
 
 
-
-def show_window(a):
+#
+# icon was clicked, show the window or re-hide it if already visible
+#
+def show_window(widget):
   if window.get_property('visible'):
     window.hide()
   else:
@@ -50,28 +70,48 @@ def show_window(a):
     window.present()
 
 
-
-def on_slide(widget):
-  value = widget.get_value()
-  set_volume(value)
-
-
+#
+# set the volume to some level bound by [0,100]
+#
 def set_volume(level):
-  mixer.setvolume(int(level))
+  level = int(level)
+
+  if level > 100:
+    level = 100
+  if level < 0:
+    level = 0
+
+  mixer.setvolume(level)
   update_all()
 
 
 def toggle_mute(a, b, c):
   mixer.setmute(not mixer.getmute()[0])
-  update_all()
 
 
+#
+# event handler for the HScale being dragged
+#
+def on_slide(widget):
+  value = widget.get_value()
+  set_volume(value)
 
-def hide_volume():
-  window.hide()
+
+#
+# event handler for scrolling while hovering the icon
+#
+def on_scroll(widget, event):
+  volume = mixer.getvolume()[0]
+
+  if event.direction == gtk.gdk.SCROLL_UP:
+    set_volume(volume + (SCROLL_BY*2))
+  elif event.direction == gtk.gdk.SCROLL_DOWN:
+    set_volume(volume - (SCROLL_BY*2))
 
 
-
+#
+# updates the global mixer, moves slider and updates icon
+#
 def update_all():
   global mixer
   mixer = alsaaudio.Mixer('Master', 0, 0)
@@ -92,21 +132,6 @@ def update_all():
 
   return True
 
-
-def volatile():
-  init_volume()
-
-  global icon
-  icon = gtk.StatusIcon()
-  icon.connect('activate',   show_window)
-  icon.connect('popup-menu', toggle_mute)
-
-  update_all()
-  icon.set_visible(1)
-
-
-  icon._timeout = gobject.timeout_add(UPDATE_INTERVAL, update_all)
-  gtk.main()
 
 if __name__ == '__main__':
   volatile()
