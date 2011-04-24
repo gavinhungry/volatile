@@ -6,9 +6,11 @@
 # Desc: Simple ALSA status icon and volume control
 #
 
+import pygtk
+pygtk.require("2.0")
+import gtk
 import alsaaudio
 import gobject
-import gtk
 
 PANEL_HEIGHT    = 22    # in pixels, negative if panel is on the bottom
 WINDOW_OPACITY  = 0.95  # 
@@ -74,18 +76,18 @@ def show_window(widget):
 # set the volume to some level bound by [0,100]
 #
 def set_volume(level):
-  level = int(level)
+  volume = int(level)
 
-  if level > 100:
-    level = 100
-  if level < 0:
-    level = 0
+  if volume > 100:
+    volume = 100
+  if volume < 0:
+    volume = 0
 
-  mixer.setvolume(level)
+  mixer.setvolume(volume)
   update_all()
 
 
-def toggle_mute(a, b, c):
+def toggle_mute(widget, button, time):
   mixer.setmute(not mixer.getmute()[0])
 
 
@@ -93,8 +95,8 @@ def toggle_mute(a, b, c):
 # event handler for the HScale being dragged
 #
 def on_slide(widget):
-  value = widget.get_value()
-  set_volume(value)
+  volume = widget.get_value()
+  set_volume(volume)
 
 
 #
@@ -129,10 +131,8 @@ def update_all():
     icon.set_from_icon_name('audio-volume-medium')
   else:
     icon.set_from_icon_name('audio-volume-high')
-
   return True
 
 
 if __name__ == '__main__':
   volatile()
-
