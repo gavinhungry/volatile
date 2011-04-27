@@ -89,6 +89,7 @@ def set_volume(level):
 
 def toggle_mute(widget, button, time):
   mixer.setmute(not mixer.getmute()[0])
+  update_all()
 
 
 #
@@ -125,9 +126,11 @@ def update_all():
 
   if volume <= 0 or muted:
     icon.set_from_icon_name('audio-volume-muted')
-  elif volume <= 35:
+  elif volume <= 20:
+    icon.set_from_icon_name('audio-volume-off')
+  elif volume <= 55:
     icon.set_from_icon_name('audio-volume-low')
-  elif volume <= 80:
+  elif volume <= 90:
     icon.set_from_icon_name('audio-volume-medium')
   else:
     icon.set_from_icon_name('audio-volume-high')
