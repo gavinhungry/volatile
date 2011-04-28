@@ -1,7 +1,7 @@
 volatile is a simple notification icon which controls audio volume via ALSA,
 and was designed for the Xfce panel.
 
-Clicking on the icon brings up a volume slider. Context-clicking the icon
+Clicking the icon brings up a volume slider. Context-clicking the icon
 toggles mute.  Scrolling while hovering the icon (whether the slider is visible
 or not) also adjusts the volume.
 
@@ -9,7 +9,7 @@ volatile repeatedly polls the ALSA mixer in order to relect changes to its
 status made from outside the program.
 
 This program is meant to be simple and so doesn't do a lot of error checking.
-It may not be particularly robust.  This might change at some point.
+It may not be particularly robust.
 
 pyalsaaudio is required in order to use volatile:
 http://pyalsaaudio.sourceforge.net/
