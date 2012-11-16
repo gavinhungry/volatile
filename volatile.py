@@ -26,7 +26,7 @@ def volatile():
 
   global icon
   icon = gtk.StatusIcon()
-  icon.connect('activate',   show_window)
+  icon.connect('activate', show_window)
   icon.connect('popup-menu', toggle_mute)
   icon.connect('scroll-event', on_scroll)
   icon.timeout = gobject.timeout_add(UPDATE_INTERVAL, update_all)
@@ -108,9 +108,9 @@ def on_scroll(widget, event):
   volume = mixer.getvolume()[0]
 
   if event.direction == gtk.gdk.SCROLL_UP:
-    set_volume(volume + (SCROLL_BY*2))
+    set_volume(volume + (SCROLL_BY * 2))
   elif event.direction == gtk.gdk.SCROLL_DOWN:
-    set_volume(volume - (SCROLL_BY*2))
+    set_volume(volume - (SCROLL_BY * 2))
 
 
 #
