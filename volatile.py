@@ -42,8 +42,11 @@ def volatile():
 #
 def init_volume():
   global window
-  window = gtk.Window(gtk.WINDOW_POPUP)
+  window = gtk.Window(gtk.WINDOW_TOPLEVEL)
   window.set_opacity(WINDOW_OPACITY)
+  window.set_decorated(False)
+  window.set_keep_above(True)
+  window.connect('focus-out-event', lambda w,e: window.hide());
 
   global slider
   slider = gtk.HScale()
