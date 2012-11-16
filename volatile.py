@@ -13,134 +13,130 @@ import gobject
 import signal
 pygtk.require("2.0")
 
-PANEL_HEIGHT    = 24    # in pixels, negative if panel is on the bottom
-WINDOW_OPACITY  = 0.95  # 
-UPDATE_INTERVAL = 250   # in ms
-VOLUME_WIDTH    = 200   # in pixels
-VOLUME_HEIGHT   = 25    # in pixels, adjust if the widget doesn't fit
-SCROLL_BY       = 2     # increase to scroll "faster"
+
+class Volatile:
+
+  def __init__(self):
+    self.PANEL_HEIGHT    = 24    # in pixels, negative if panel is on bottom
+    self.WINDOW_OPACITY  = 0.95  # 
+    self.UPDATE_INTERVAL = 250   # in ms
+    self.VOLUME_WIDTH    = 200   # in pixels
+    self.VOLUME_HEIGHT   = 25    # in pixels, adjust if the widget doesn't fit
+    self.SCROLL_BY       = 2     # increase to scroll "faster"
+
+    self.init_volume()
+
+    self.icon = gtk.StatusIcon()
+    self.icon.connect('activate', self.show_window)
+    self.icon.connect('popup-menu', self.toggle_mute)
+    self.icon.connect('scroll-event', self.on_scroll)
+    self.icon.timeout = gobject.timeout_add(self.UPDATE_INTERVAL, self.update)
+
+    self.update()
+    self.icon.set_visible(True)
+
+    signal.signal(signal.SIGINT, gtk.main_quit)
+    gtk.main()
 
 
-def volatile():
-  init_volume()
+  #
+  # create the slider and containing window
+  #
+  def init_volume(self):
+    self.window = gtk.Window(gtk.WINDOW_POPUP)
+    self.window.set_opacity(self.WINDOW_OPACITY)
 
-  global icon
-  icon = gtk.StatusIcon()
-  icon.connect('activate', show_window)
-  icon.connect('popup-menu', toggle_mute)
-  icon.connect('scroll-event', on_scroll)
-  icon.timeout = gobject.timeout_add(UPDATE_INTERVAL, update_all)
+    self.slider = gtk.HScale()
+    self.slider.set_can_focus(False)
+    self.slider.set_size_request(self.VOLUME_WIDTH, self.VOLUME_HEIGHT)
+    self.slider.set_range(0, 100)
+    self.slider.set_increments(-self.SCROLL_BY, 12)
+    self.slider.set_draw_value(0)
+    self.slider.connect('value-changed', self.on_slide)
 
-  update_all()
-  icon.set_visible(1)
-
-  gtk.main()
-
-
-#
-# create the slider and containing window
-#
-def init_volume():
-  global window
-  window = gtk.Window(gtk.WINDOW_TOPLEVEL)
-  window.set_opacity(WINDOW_OPACITY)
-  window.set_decorated(False)
-  window.set_keep_above(True)
-  window.connect('focus-out-event', lambda w,e: window.hide());
-
-  global slider
-  slider = gtk.HScale()
-  slider.set_size_request(VOLUME_WIDTH, VOLUME_HEIGHT)
-  slider.set_range(0, 100)
-  slider.set_increments(-SCROLL_BY, 12)
-  slider.set_draw_value(0)
-  slider.connect('value-changed', on_slide)
-
-  frame = gtk.Frame()
-  frame.set_shadow_type(gtk.SHADOW_OUT)
-  frame.add(slider)
-  window.add(frame)
+    self.frame = gtk.Frame()
+    self.frame.set_shadow_type(gtk.SHADOW_OUT)
+    self.frame.add(self.slider)
+    self.window.add(self.frame)
 
 
-#
-# icon was clicked, show the window or re-hide it if already visible
-#
-def show_window(widget):
-  if window.get_property('visible'):
-    window.hide()
-  else:
-    update_all()
-    window.set_position(gtk.WIN_POS_MOUSE)
-    window.move(window.get_position()[0], PANEL_HEIGHT)
-    window.show_all()
-    window.present()
+  #
+  # icon was clicked, show the window or re-hide it if already visible
+  #
+  def show_window(self, widget):
+    if self.window.get_property('visible'):
+      self.window.hide()
+    else:
+      self.update()
+      self.window.set_position(gtk.WIN_POS_MOUSE)
+      self.window.move(self.window.get_position()[0], self.PANEL_HEIGHT)
+      self.window.show_all()
+      self.window.present()
 
 
-#
-# set the volume to some level bound by [0,100]
-#
-def set_volume(level):
-  volume = int(level)
+  #
+  # set the volume to some level bound by [0,100]
+  #
+  def set_volume(self, level):
+    volume = int(level)
 
-  if volume > 100:
-    volume = 100
-  if volume < 0:
-    volume = 0
+    if volume > 100:
+      volume = 100
+    if volume < 0:
+      volume = 0
 
-  mixer.setvolume(volume)
-  update_all()
-
-
-def toggle_mute(widget, button, time):
-  mixer.setmute(not mixer.getmute()[0])
-  update_all()
+    self.mixer.setvolume(volume)
+    self.update()
 
 
-#
-# event handler for the HScale being dragged
-#
-def on_slide(widget):
-  volume = widget.get_value()
-  set_volume(volume)
+  def toggle_mute(self, widget, button, time):
+    self.mixer.setmute(not self.mixer.getmute()[0])
+    self.update()
 
 
-#
-# event handler for scrolling while hovering the icon
-#
-def on_scroll(widget, event):
-  volume = mixer.getvolume()[0]
-
-  if event.direction == gtk.gdk.SCROLL_UP:
-    set_volume(volume + (SCROLL_BY * 2))
-  elif event.direction == gtk.gdk.SCROLL_DOWN:
-    set_volume(volume - (SCROLL_BY * 2))
+  #
+  # event handler for the HScale being dragged
+  #
+  def on_slide(self, widget):
+    volume = widget.get_value()
+    self.set_volume(volume)
 
 
-#
-# updates the global mixer, moves slider and updates icon
-#
-def update_all():
-  global mixer
-  mixer = alsaaudio.Mixer('Master', 0, 0)
+  #
+  # event handler for scrolling while hovering the icon
+  #
+  def on_scroll(self, widget, event):
+    volume = self.mixer.getvolume()[0]
 
-  volume = mixer.getvolume()[0]
-  muted  = mixer.getmute()[0]
+    if event.direction == gtk.gdk.SCROLL_UP:
+      self.set_volume(volume + (self.SCROLL_BY * 2))
+    elif event.direction == gtk.gdk.SCROLL_DOWN:
+      self.set_volume(volume - (self.SCROLL_BY * 2))
 
-  slider.set_value(volume)
 
-  if volume <= 0 or muted:
-    icon.set_from_icon_name('audio-volume-muted')
-  elif volume <= 20:
-    icon.set_from_icon_name('audio-volume-off')
-  elif volume <= 55:
-    icon.set_from_icon_name('audio-volume-low')
-  elif volume <= 90:
-    icon.set_from_icon_name('audio-volume-medium')
-  else:
-    icon.set_from_icon_name('audio-volume-high')
-  return True
+  #
+  # updates the global mixer, moves slider and updates icon
+  #
+  def update(self):
+    self.mixer = alsaaudio.Mixer('Master', 0, 0)
+
+    volume = self.mixer.getvolume()[0]
+    muted  = self.mixer.getmute()[0]
+
+    self.slider.set_value(volume)
+
+    if volume <= 0 or muted:
+      self.icon.set_from_icon_name('audio-volume-muted')
+    elif volume <= 20:
+      self.icon.set_from_icon_name('audio-volume-off')
+    elif volume <= 55:
+      self.icon.set_from_icon_name('audio-volume-low')
+    elif volume <= 90:
+      self.icon.set_from_icon_name('audio-volume-medium')
+    else:
+      self.icon.set_from_icon_name('audio-volume-high')
+    return True
 
 
 if __name__ == '__main__':
-  signal.signal(signal.SIGINT, gtk.main_quit)
-  volatile()
+  vol = Volatile();
