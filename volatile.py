@@ -2,17 +2,18 @@
 #
 # Name: volatile
 # Auth: Gavin Lloyd <gavinhungry@gmail.com>
-# Date: 21 Apr 2011
+# Date: 21 Apr 2011 (last modified: 15 Nov 2012)
 # Desc: Simple ALSA status icon and volume control
 #
 
 import pygtk
-pygtk.require("2.0")
 import gtk
 import alsaaudio
 import gobject
+import signal
+pygtk.require("2.0")
 
-PANEL_HEIGHT    = 22    # in pixels, negative if panel is on the bottom
+PANEL_HEIGHT    = 24    # in pixels, negative if panel is on the bottom
 WINDOW_OPACITY  = 0.95  # 
 UPDATE_INTERVAL = 250   # in ms
 VOLUME_WIDTH    = 200   # in pixels
@@ -138,4 +139,5 @@ def update_all():
 
 
 if __name__ == '__main__':
+  signal.signal(signal.SIGINT, gtk.main_quit)
   volatile()
