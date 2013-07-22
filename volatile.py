@@ -19,7 +19,7 @@ class Volatile:
   def __init__(self):
     self.PANEL_HEIGHT    = 25    # in pixels, negative if panel is on bottom
     self.WINDOW_OPACITY  = 0.95  #
-    self.UPDATE_INTERVAL = 250   # in ms
+    self.UPDATE_INTERVAL = 200   # in ms
     self.VOLUME_WIDTH    = 200   # in pixels
     self.VOLUME_HEIGHT   = 25    # in pixels, adjust if the widget doesn't fit
     self.SCROLL_BY       = 2     # increase to scroll "faster"
