@@ -2,7 +2,7 @@
 #
 # Name: volatile
 # Auth: Gavin Lloyd <gavinhungry@gmail.com>
-# Date: 21 Apr 2011 (last modified: 20 Nov 2012)
+# Date: 21 Apr 2011 (last modified: 21 Jul 2013)
 # Desc: Simple ALSA status icon and volume control
 #
 
@@ -18,7 +18,7 @@ class Volatile:
 
   def __init__(self):
     self.PANEL_HEIGHT    = 25    # in pixels, negative if panel is on bottom
-    self.WINDOW_OPACITY  = 0.95  # 
+    self.WINDOW_OPACITY  = 0.95  #
     self.UPDATE_INTERVAL = 250   # in ms
     self.VOLUME_WIDTH    = 200   # in pixels
     self.VOLUME_HEIGHT   = 25    # in pixels, adjust if the widget doesn't fit
@@ -118,7 +118,10 @@ class Volatile:
   # updates the global mixer, moves slider and updates icon
   #
   def update(self):
-    self.mixer = alsaaudio.Mixer('Master', 0, 0)
+    try:
+      self.mixer = alsaaudio.Mixer('Master', 0, 0)
+    except alsaaudio.ALSAAudioError:
+      return True
 
     volume = self.mixer.getvolume()[0]
     muted  = self.mixer.getmute()[0]
