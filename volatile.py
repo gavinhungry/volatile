@@ -2,7 +2,6 @@
 #
 # Name: volatile
 # Auth: Gavin Lloyd <gavinhungry@gmail.com>
-# Date: 21 Apr 2011 (last modified: 21 Jul 2013)
 # Desc: Simple ALSA status icon and volume control
 #
 
@@ -90,7 +89,16 @@ class Volatile:
 
 
   def toggle_mute(self, widget, button, time):
-    self.mixer.setmute(not self.mixer.getmute()[0])
+    mute = not self.mixer.getmute()[0]
+
+    self.mixer.setmute(mute)
+
+    if hasattr(self, 'headphone'):
+      self.headphone.setmute(mute)
+
+    if hasattr(self, 'speaker'):
+      self.speaker.setmute(mute)
+
     self.update()
 
 
@@ -119,9 +127,15 @@ class Volatile:
   #
   def update(self):
     try:
-      self.mixer = alsaaudio.Mixer('Master', 0, 0)
+      self.mixer = alsaaudio.Mixer()
     except alsaaudio.ALSAAudioError:
       return True
+
+    try:
+      self.headphone = alsaaudio.Mixer('Headphone')
+      self.speaker = alsaaudio.Mixer('Speaker')
+    except alsaaudio.ALSAAudioError:
+      pass
 
     volume = self.mixer.getvolume()[0]
     muted  = self.mixer.getmute()[0]
