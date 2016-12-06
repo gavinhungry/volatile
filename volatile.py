@@ -5,6 +5,8 @@
 # Desc: Simple ALSA status icon and volume control
 #
 
+import sys
+import getopt
 import pygtk
 import gtk
 import alsaaudio
@@ -15,13 +17,18 @@ pygtk.require("2.0")
 
 class Volatile:
 
-  def __init__(self):
+  def __init__(self, reverse):
+    self.REVERSE_SCROLL  = reverse;
+
     self.PANEL_HEIGHT    = 25    # in pixels, negative if panel is on bottom
     self.WINDOW_OPACITY  = 0.95  #
     self.UPDATE_INTERVAL = 200   # in ms
     self.VOLUME_WIDTH    = 200   # in pixels
     self.VOLUME_HEIGHT   = 25    # in pixels, adjust if the widget doesn't fit
     self.SCROLL_BY       = 2     # increase to scroll "faster"
+
+    if self.REVERSE_SCROLL:
+      self.SCROLL_BY *= -1;
 
     self.init_volume()
 
@@ -156,4 +163,16 @@ class Volatile:
 
 
 if __name__ == '__main__':
-  vol = Volatile();
+  try:
+    args, _ = getopt.getopt(sys.argv[1:], 'r', ['reverse-scroll']);
+  except getopt.GetoptError as err:
+    print >> sys.stderr, err;
+    sys.exit(1);
+
+  reverse = False;
+
+  for arg, val in args:
+    if arg in ('-r', '--reverse-scroll'):
+      reverse = True;
+
+  vol = Volatile(reverse);
