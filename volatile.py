@@ -20,7 +20,7 @@ class Volatile:
   def __init__(self, reverse):
     self.REVERSE_SCROLL  = reverse;
 
-    self.PANEL_HEIGHT    = 25    # in pixels, negative if panel is on bottom
+    self.PANEL_HEIGHT    = 30    # in pixels, negative if panel is on bottom
     self.WINDOW_OPACITY  = 0.95  #
     self.UPDATE_INTERVAL = 200   # in ms
     self.VOLUME_WIDTH    = 200   # in pixels
