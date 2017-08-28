@@ -17,8 +17,10 @@ pygtk.require("2.0")
 
 class Volatile:
 
-  def __init__(self, reverse):
-    self.REVERSE_SCROLL  = reverse;
+  def __init__(self, reverse, card):
+    self.REVERSE_SCROLL  = reverse
+    self.CARD            = int(card)
+    self.MASTER          = alsaaudio.mixers(self.CARD)[0]
 
     self.PANEL_HEIGHT    = 30    # in pixels, negative if panel is on bottom
     self.WINDOW_OPACITY  = 0.95  #
@@ -28,7 +30,7 @@ class Volatile:
     self.SCROLL_BY       = 2     # increase to scroll "faster"
 
     if self.REVERSE_SCROLL:
-      self.SCROLL_BY *= -1;
+      self.SCROLL_BY *= -1
 
     self.init_volume()
 
@@ -134,13 +136,13 @@ class Volatile:
   #
   def update(self):
     try:
-      self.mixer = alsaaudio.Mixer()
+      self.mixer = alsaaudio.Mixer(self.MASTER, 0, self.CARD)
     except alsaaudio.ALSAAudioError:
       return True
 
     try:
-      self.headphone = alsaaudio.Mixer('Headphone')
-      self.speaker = alsaaudio.Mixer('Speaker')
+      self.headphone = alsaaudio.Mixer('Headphone', 0, self.CARD)
+      self.speaker = alsaaudio.Mixer('Speaker', 0, self.CARD)
     except alsaaudio.ALSAAudioError:
       pass
 
@@ -164,15 +166,19 @@ class Volatile:
 
 if __name__ == '__main__':
   try:
-    args, _ = getopt.getopt(sys.argv[1:], 'r', ['reverse-scroll']);
+    args, _ = getopt.getopt(sys.argv[1:], 'rc:', ['reverse-scroll', 'card='])
   except getopt.GetoptError as err:
-    print >> sys.stderr, err;
-    sys.exit(1);
+    print >> sys.stderr, err
+    sys.exit(1)
 
-  reverse = False;
+  reverse = False
+  card = 0
 
   for arg, val in args:
     if arg in ('-r', '--reverse-scroll'):
-      reverse = True;
+      reverse = True
 
-  vol = Volatile(reverse);
+    if arg in ('-c', '--card'):
+      card = val
+
+  vol = Volatile(reverse, card)
