@@ -122,9 +122,9 @@ class Volatile:
     volume = self.mixer.getvolume()[0]
 
     if event.direction == gtk.gdk.SCROLL_UP:
-      self.set_volume(volume + (self.SCROLL_BY * 2))
+      self.set_volume(volume + (self.SCROLL_BY))
     elif event.direction == gtk.gdk.SCROLL_DOWN:
-      self.set_volume(volume - (self.SCROLL_BY * 2))
+      self.set_volume(volume - (self.SCROLL_BY))
 
   def watch(self, fd, cond):
     self.mixer.handleevents()
