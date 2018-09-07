@@ -20,7 +20,7 @@ class Volatile:
     self.CARD            = int(card)
     self.MASTER          = alsaaudio.mixers(self.CARD)[0]
 
-    self.PANEL_HEIGHT    = 30    # in pixels, negative if panel is on bottom
+    self.PANEL_HEIGHT    = 32    # in pixels, negative if panel is on bottom
     self.WINDOW_OPACITY  = 0.95  #
     self.VOLUME_WIDTH    = 200   # in pixels
     self.VOLUME_HEIGHT   = 25    # in pixels, adjust if the widget doesn't fit
