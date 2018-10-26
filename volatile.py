@@ -154,6 +154,13 @@ class Volatile:
     else:
       self.icon.set_from_icon_name('audio-volume-high')
 
+    tooltip_text = "Volume: {0}%".format(volume)
+
+    if muted:
+      tooltip_text += ' (muted)'
+
+    self.icon.set_tooltip_text(tooltip_text)
+
 if __name__ == '__main__':
   try:
     args, _ = getopt.getopt(sys.argv[1:], 'rc:', ['reverse-scroll', 'card='])
