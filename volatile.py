@@ -20,7 +20,7 @@ class Volatile:
     self.CARD            = int(card)
     self.MASTER          = alsaaudio.mixers(self.CARD)[0]
 
-    self.PANEL_HEIGHT    = 32    # in pixels, negative if panel is on bottom
+    self.PANEL_HEIGHT    = 34    # in pixels, negative if panel is on bottom
     self.WINDOW_OPACITY  = 0.95  #
     self.VOLUME_WIDTH    = 200   # in pixels
     self.VOLUME_HEIGHT   = 25    # in pixels, adjust if the widget doesn't fit
@@ -41,7 +41,7 @@ class Volatile:
   # create the icon, slider and containing window
   def init_gtk(self):
     self.icon = gtk.StatusIcon()
-    self.icon.connect('activate', self.show_window)
+    self.icon.connect('activate', self.toggle_window)
     self.icon.connect('popup-menu', self.toggle_mute)
     self.icon.connect('scroll-event', self.on_scroll)
 
@@ -79,15 +79,20 @@ class Volatile:
     fd, eventmask = self.mixer.polldescriptors()[0];
     gobject.io_add_watch(fd, eventmask, self.watch)
 
-  # icon was clicked, show the window or re-hide it if already visible
-  def show_window(self, widget):
+  def show_window(self):
+    self.window.set_position(gtk.WIN_POS_MOUSE)
+    self.window.move(self.window.get_position()[0], self.PANEL_HEIGHT)
+    self.window.show_all()
+    self.window.present()
+
+  def hide_window(self):
+    self.window.hide()
+
+  def toggle_window(self, widget):
     if self.window.get_property('visible'):
-      self.window.hide()
+      self.hide_window()
     else:
-      self.window.set_position(gtk.WIN_POS_MOUSE)
-      self.window.move(self.window.get_position()[0], self.PANEL_HEIGHT)
-      self.window.show_all()
-      self.window.present()
+      self.show_window()
 
   # set the volume to some level bound by [0,100]
   def set_volume(self, level):
