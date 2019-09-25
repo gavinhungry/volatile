@@ -45,8 +45,15 @@ class Volatile:
     self.icon.connect('popup-menu', self.toggle_mute)
     self.icon.connect('scroll-event', self.on_scroll)
 
-    self.window = gtk.Window(gtk.WINDOW_POPUP)
+    self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+    self.window.set_skip_taskbar_hint(True)
+    self.window.set_skip_pager_hint(True)
+    self.window.set_decorated(False)
+    self.window.set_resizable(False)
+    self.window.set_keep_above(True)
+    self.window.set_wmclass('volatile', 'volatile')
     self.window.set_opacity(self.WINDOW_OPACITY)
+    self.window.connect('focus-out-event', self.on_focus_out)
 
     self.slider = gtk.HScale()
     self.slider.set_can_focus(False)
@@ -130,6 +137,9 @@ class Volatile:
       self.set_volume(volume + (self.SCROLL_BY))
     elif event.direction == gtk.gdk.SCROLL_DOWN:
       self.set_volume(volume - (self.SCROLL_BY))
+
+  def on_focus_out(self, widget, event):
+    self.hide_window()
 
   def watch(self, fd, cond):
     self.mixer.handleevents()
