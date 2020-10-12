@@ -24,7 +24,10 @@ class Volatile:
     self.WINDOW_OPACITY  = 0.95  #
     self.VOLUME_WIDTH    = 200   # in pixels
     self.VOLUME_HEIGHT   = 25    # in pixels, adjust if the widget doesn't fit
-    self.SCROLL_BY       = 2     # increase to scroll "faster"
+    self.SCROLL_BY       = 3     # increase to scroll "faster"
+    self.MAX_VOLUME      = 90    # limit volume percentage
+
+    self.VOLUME_MULTIPLIER = float(100) / self.MAX_VOLUME
 
     if self.REVERSE_SCROLL:
       self.SCROLL_BY *= -1
@@ -59,7 +62,7 @@ class Volatile:
     self.slider.set_can_focus(False)
     self.slider.set_size_request(self.VOLUME_WIDTH, self.VOLUME_HEIGHT)
     self.slider.set_range(0, 100)
-    self.slider.set_increments(-self.SCROLL_BY, 12)
+    self.slider.set_increments(-self.SCROLL_BY, -self.SCROLL_BY * 2)
     self.slider.set_draw_value(0)
     self.slider.connect('value-changed', self.on_slide)
 
@@ -101,17 +104,6 @@ class Volatile:
     else:
       self.show_window()
 
-  # set the volume to some level bound by [0,100]
-  def set_volume(self, level):
-    volume = int(level)
-
-    if volume > 100:
-      volume = 100
-    if volume < 0:
-      volume = 0
-
-    self.mixer.setvolume(volume)
-
   # toggle current mute state
   def toggle_mute(self, widget, button, time):
     mute = not self.mixer.getmute()[0]
@@ -124,21 +116,46 @@ class Volatile:
     if hasattr(self, 'speaker'):
       self.speaker.setmute(mute)
 
+  def clamp(self, value, min = 0, max = 100):
+    if value > max:
+      return max
+    if value < min:
+      return min
+
+    return int(round(value))
+
+  def level_to_volume(self, level):
+    volume = level / self.VOLUME_MULTIPLIER
+    return self.clamp(volume, 0, self.MAX_VOLUME)
+
+  def volume_to_level(self, volume):
+    level = volume * self.VOLUME_MULTIPLIER
+    return self.clamp(level, 0, 100)
+
+  def get_level(self):
+    volume = self.mixer.getvolume()[0]
+    return self.volume_to_level(volume)
+
+  def set_level(self, level):
+    volume = self.level_to_volume(level)
+    self.mixer.setvolume(volume)
+
   # event handler for the HScale being dragged
   def on_slide(self, widget):
-    volume = widget.get_value()
-    self.set_volume(volume)
+    level = widget.get_value()
+    self.set_level(level)
 
   # event handler for scrolling while hovering the icon
   def on_scroll(self, widget, event):
-    volume = self.mixer.getvolume()[0]
+    level = self.get_level()
 
-    if event.direction == gtk.gdk.SCROLL_UP:
-      self.set_volume(volume + (self.SCROLL_BY))
-    elif event.direction == gtk.gdk.SCROLL_DOWN:
-      self.set_volume(volume - (self.SCROLL_BY))
+    if event.direction == gtk.gdk.SCROLL_DOWN:
+      self.set_level(level - (self.SCROLL_BY))
+    elif event.direction == gtk.gdk.SCROLL_UP:
+      self.set_level(level + (self.SCROLL_BY))
 
   def on_focus_out(self, widget, event):
+    return
     self.hide_window()
 
   def watch(self, fd, cond):
@@ -148,23 +165,23 @@ class Volatile:
 
   # updates the global mixer, moves slider and updates icon
   def update(self):
-    volume = self.mixer.getvolume()[0]
-    muted  = self.mixer.getmute()[0]
+    level = self.get_level()
+    muted = self.mixer.getmute()[0]
 
-    self.slider.set_value(volume)
+    self.slider.set_value(level)
 
-    if volume <= 0 or muted:
+    if level <= 0 or muted:
       self.icon.set_from_icon_name('audio-volume-muted')
-    elif volume <= 20:
+    elif level <= 20:
       self.icon.set_from_icon_name('audio-volume-off')
-    elif volume <= 55:
+    elif level <= 55:
       self.icon.set_from_icon_name('audio-volume-low')
-    elif volume <= 90:
+    elif level <= 90:
       self.icon.set_from_icon_name('audio-volume-medium')
     else:
       self.icon.set_from_icon_name('audio-volume-high')
 
-    tooltip_text = "Volume: {0}%".format(volume)
+    tooltip_text = "Volume: {0}%".format(level)
 
     if muted:
       tooltip_text += ' (muted)'
