@@ -155,7 +155,6 @@ class Volatile:
       self.set_level(level + (self.SCROLL_BY))
 
   def on_focus_out(self, widget, event):
-    return
     self.hide_window()
 
   def watch(self, fd, cond):
