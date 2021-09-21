@@ -15,9 +15,11 @@ import sys
 pygtk.require("2.0")
 
 class Volatile:
-  def __init__(self, reverse, card):
+  def __init__(self, reverse, card, maxvol):
     self.REVERSE_SCROLL  = reverse
-    self.CARD            = int(card)
+    self.CARD            = card
+    self.MAX_VOLUME      = maxvol
+
     self.MASTER          = alsaaudio.mixers(self.CARD)[0]
 
     self.PANEL_HEIGHT    = 34    # in pixels, negative if panel is on bottom
@@ -25,7 +27,6 @@ class Volatile:
     self.VOLUME_WIDTH    = 200   # in pixels
     self.VOLUME_HEIGHT   = 25    # in pixels, adjust if the widget doesn't fit
     self.SCROLL_BY       = 3     # increase to scroll "faster"
-    self.MAX_VOLUME      = 90    # limit volume percentage
 
     self.VOLUME_MULTIPLIER = float(100) / self.MAX_VOLUME
 
@@ -86,7 +87,7 @@ class Volatile:
     except alsaaudio.ALSAAudioError:
       pass
 
-    fd, eventmask = self.mixer.polldescriptors()[0];
+    fd, eventmask = self.mixer.polldescriptors()[0]
     gobject.io_add_watch(fd, eventmask, self.watch)
 
   def show_window(self):
@@ -189,19 +190,25 @@ class Volatile:
 
 if __name__ == '__main__':
   try:
-    args, _ = getopt.getopt(sys.argv[1:], 'rc:', ['reverse-scroll', 'card='])
+    args, _ = getopt.getopt(sys.argv[1:], 'rc:m:', [
+      'reverse-scroll', 'card=', 'max-volume='
+    ])
   except getopt.GetoptError as err:
     print >> sys.stderr, err
     sys.exit(1)
 
   reverse = False
   card = 0
+  maxvol = 100
 
   for arg, val in args:
     if arg in ('-r', '--reverse-scroll'):
       reverse = True
 
     if arg in ('-c', '--card'):
-      card = val
+      card = int(val)
 
-  volatile = Volatile(reverse, card)
+    if arg in ('-m', '--max-volume'):
+      maxvol = min(100, max(0, int(val)))
+
+  volatile = Volatile(reverse, card, maxvol)
