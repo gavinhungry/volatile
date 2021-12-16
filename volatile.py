@@ -15,10 +15,11 @@ import sys
 pygtk.require("2.0")
 
 class Volatile:
-  def __init__(self, reverse, card, maxvol):
+  def __init__(self, reverse, card, maxvol, vicons):
     self.REVERSE_SCROLL  = reverse
     self.CARD            = card
     self.MAX_VOLUME      = maxvol
+    self.VOLATILE_ICONS  = vicons
 
     self.MASTER          = alsaaudio.mixers(self.CARD)[0]
 
@@ -163,6 +164,10 @@ class Volatile:
     self.update()
     return True
 
+  def set_icon(self, icon_name):
+    _icon_name = 'volatile-' + icon_name if self.VOLATILE_ICONS else icon_name
+    self.icon.set_from_icon_name(_icon_name)
+
   # updates the global mixer, moves slider and updates icon
   def update(self):
     level = self.get_level()
@@ -171,15 +176,15 @@ class Volatile:
     self.slider.set_value(level)
 
     if level <= 0 or muted:
-      self.icon.set_from_icon_name('audio-volume-muted')
+      self.set_icon('audio-volume-muted')
     elif level <= 20:
-      self.icon.set_from_icon_name('audio-volume-off')
-    elif level <= 55:
-      self.icon.set_from_icon_name('audio-volume-low')
-    elif level <= 90:
-      self.icon.set_from_icon_name('audio-volume-medium')
+      self.set_icon('audio-volume-off')
+    elif level <= 50:
+      self.set_icon('audio-volume-low')
+    elif level <= 70:
+      self.set_icon('audio-volume-medium')
     else:
-      self.icon.set_from_icon_name('audio-volume-high')
+      self.set_icon('audio-volume-high')
 
     tooltip_text = "Volume: {0}%".format(level)
 
@@ -191,7 +196,7 @@ class Volatile:
 if __name__ == '__main__':
   try:
     args, _ = getopt.getopt(sys.argv[1:], 'rc:m:', [
-      'reverse-scroll', 'card=', 'max-volume='
+      'reverse-scroll', 'card=', 'max-volume=', 'volatile-icons'
     ])
   except getopt.GetoptError as err:
     print >> sys.stderr, err
@@ -200,6 +205,7 @@ if __name__ == '__main__':
   reverse = False
   card = 0
   maxvol = 100
+  vicons = False
 
   for arg, val in args:
     if arg in ('-r', '--reverse-scroll'):
@@ -211,4 +217,7 @@ if __name__ == '__main__':
     if arg in ('-m', '--max-volume'):
       maxvol = min(100, max(0, int(val)))
 
-  volatile = Volatile(reverse, card, maxvol)
+    if arg in ('-v', '--volatile-icons'):
+      vicons = True
+
+  volatile = Volatile(reverse, card, maxvol, vicons)
