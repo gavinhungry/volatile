@@ -24,9 +24,9 @@ class Volatile:
     self.MASTER          = alsaaudio.mixers(self.CARD)[0]
 
     self.PANEL_HEIGHT    = 34    # in pixels, negative if panel is on bottom
-    self.WINDOW_OPACITY  = 0.95  #
-    self.VOLUME_WIDTH    = 200   # in pixels
-    self.VOLUME_HEIGHT   = 25    # in pixels, adjust if the widget doesn't fit
+    self.WINDOW_OPACITY  = 1.0   #
+    self.VOLUME_WIDTH    = 240   # in pixels
+    self.VOLUME_HEIGHT   = 30    # in pixels, adjust if the widget doesn't fit
     self.SCROLL_BY       = 3     # increase to scroll "faster"
 
     self.VOLUME_MULTIPLIER = float(100) / self.MAX_VOLUME
