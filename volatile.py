@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 #
 # volatile: ALSA status icon and volume control
 # https://github.com/gavinhungry/volatile
@@ -6,13 +6,15 @@
 
 import alsaaudio
 import getopt
-import gobject
-import gtk
-import pygtk
+import gi
 import signal
 import sys
+import warnings
 
-pygtk.require("2.0")
+gi.require_version('Gtk', '3.0')
+from gi.repository import GLib, Gtk, Gdk
+
+warnings.filterwarnings('ignore', category=DeprecationWarning)
 
 class Volatile:
   def __init__(self, reverse, card, maxvol, vicons):
@@ -24,7 +26,6 @@ class Volatile:
     self.MASTER          = alsaaudio.mixers(self.CARD)[0]
 
     self.PANEL_HEIGHT    = 34    # in pixels, negative if panel is on bottom
-    self.WINDOW_OPACITY  = 1.0   #
     self.VOLUME_WIDTH    = 240   # in pixels
     self.VOLUME_HEIGHT   = 30    # in pixels, adjust if the widget doesn't fit
     self.SCROLL_BY       = 3     # increase to scroll "faster"
@@ -40,27 +41,26 @@ class Volatile:
     self.update()
     self.icon.set_visible(True)
 
-    signal.signal(signal.SIGINT, gtk.main_quit)
-    gtk.main()
+    signal.signal(signal.SIGINT, Gtk.main_quit)
+    Gtk.main()
 
   # create the icon, slider and containing window
   def init_gtk(self):
-    self.icon = gtk.StatusIcon()
+    self.icon = Gtk.StatusIcon()
     self.icon.connect('activate', self.toggle_window)
     self.icon.connect('popup-menu', self.toggle_mute)
     self.icon.connect('scroll-event', self.on_scroll)
 
-    self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+    self.window = Gtk.Window()
     self.window.set_skip_taskbar_hint(True)
     self.window.set_skip_pager_hint(True)
     self.window.set_decorated(False)
     self.window.set_resizable(False)
     self.window.set_keep_above(True)
-    self.window.set_wmclass('volatile', 'volatile')
-    self.window.set_opacity(self.WINDOW_OPACITY)
+    self.window.set_role('volatile')
     self.window.connect('focus-out-event', self.on_focus_out)
 
-    self.slider = gtk.HScale()
+    self.slider = Gtk.HScale()
     self.slider.set_can_focus(False)
     self.slider.set_size_request(self.VOLUME_WIDTH, self.VOLUME_HEIGHT)
     self.slider.set_range(0, 100)
@@ -68,8 +68,7 @@ class Volatile:
     self.slider.set_draw_value(0)
     self.slider.connect('value-changed', self.on_slide)
 
-    self.frame = gtk.Frame()
-    self.frame.set_shadow_type(gtk.SHADOW_OUT)
+    self.frame = Gtk.Frame()
     self.frame.add(self.slider)
 
     self.window.add(self.frame)
@@ -88,11 +87,11 @@ class Volatile:
     except alsaaudio.ALSAAudioError:
       pass
 
-    fd, eventmask = self.mixer.polldescriptors()[0]
-    gobject.io_add_watch(fd, eventmask, self.watch)
+    fd, _eventmask = self.mixer.polldescriptors()[0]
+    GLib.io_add_watch(fd, GLib.IOCondition.IN, self.watch)
 
   def show_window(self):
-    self.window.set_position(gtk.WIN_POS_MOUSE)
+    self.window.set_position(Gtk.WindowPosition.MOUSE)
     self.window.move(self.window.get_position()[0], self.PANEL_HEIGHT)
     self.window.show_all()
     self.window.present()
@@ -151,9 +150,9 @@ class Volatile:
   def on_scroll(self, widget, event):
     level = self.get_level()
 
-    if event.direction == gtk.gdk.SCROLL_DOWN:
+    if event.direction == Gdk.ScrollDirection.DOWN:
       self.set_level(level - (self.SCROLL_BY))
-    elif event.direction == gtk.gdk.SCROLL_UP:
+    elif event.direction == Gdk.ScrollDirection.UP:
       self.set_level(level + (self.SCROLL_BY))
 
   def on_focus_out(self, widget, event):
