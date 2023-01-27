@@ -91,7 +91,6 @@ class Volatile:
     self.level.set_margin_end(self.LEVEL_PADDING)
     self.level.set_margin_top(self.LEVEL_PADDING)
     self.level.set_margin_bottom(self.LEVEL_PADDING)
-    self.level.set_opacity(1 -	(1 - self.LEVEL_OPACITY) / 2)
 
     self.level_window = Gtk.Window()
     self.level_window.set_skip_taskbar_hint(True)
