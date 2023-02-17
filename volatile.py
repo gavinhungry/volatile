@@ -240,9 +240,11 @@ class Volatile:
     self.mixer.setmute(mute)
 
     if hasattr(self, 'headphone'):
+      self.headphone.setmute(not mute)
       self.headphone.setmute(mute)
 
     if hasattr(self, 'speaker'):
+      self.speaker.setmute(not mute)
       self.speaker.setmute(mute)
 
   #
