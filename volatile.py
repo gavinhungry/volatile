@@ -310,6 +310,8 @@ class Volatile:
     level = self.get_level()
     muted = self.mixer.getmute()[0]
 
+    self.slider.set_sensitive(not muted)
+
     if muted:
       self.level.add_offset_value('muted', 100)
     else:
