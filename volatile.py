@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# volatile: ALSA status icon and volume control
+# volatile: ALSA / PulseAudio status icon and volume control
 # https://github.com/gavinhungry/volatile
 #
 
@@ -18,19 +18,17 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import GLib, Gtk, Gdk
 
 class Volatile:
-  def __init__(self, reverse, card, maxvol, vicons):
+  def __init__(self, reverse, maxvol, vicons):
     self.REVERSE_SCROLL = reverse
-    self.CARD           = card
     self.MAX_VOLUME     = maxvol
     self.VOLATILE_ICONS = vicons
 
-    self.MASTER = alsaaudio.mixers(self.CARD)[0]
     self.TIMER  = None
 
     self.PANEL_HEIGHT  = 34  # in pixels, negative if panel is on bottom
     self.SLIDER_WIDTH  = 240 # in pixels
     self.SLIDER_HEIGHT = 30  # in pixels, adjust if the widget doesn't fit
-    self.SCROLL_BY     = 3   # increase to scroll "faster"
+    self.SCROLL_BY     = 2   # increase to scroll "faster"
 
     self.VOLUME_MULTIPLIER = float(100) / self.MAX_VOLUME
 
@@ -65,7 +63,7 @@ class Volatile:
     self.slider.set_can_focus(False)
     self.slider.set_size_request(self.SLIDER_WIDTH, self.SLIDER_HEIGHT)
     self.slider.set_range(0, 100)
-    self.slider.set_increments(-self.SCROLL_BY, -self.SCROLL_BY * 2)
+    self.slider.set_increments(self.SCROLL_BY, self.SCROLL_BY * 2)
     self.slider.set_draw_value(0)
     self.slider.connect('value-changed', self.on_slide)
 
@@ -155,16 +153,11 @@ class Volatile:
   # define mixer and start watch
   def init_alsa(self):
     try:
-      self.mixer = alsaaudio.Mixer(self.MASTER, 0, self.CARD)
+      self.mixer = alsaaudio.Mixer('Master', device='pulse')
+
     except alsaaudio.ALSAAudioError:
       print >> sys.stderr, 'Could not initialize mixer'
       sys.exit(2)
-
-    try:
-      self.headphone = alsaaudio.Mixer('Headphone', 0, self.CARD)
-      self.speaker = alsaaudio.Mixer('Speaker', 0, self.CARD)
-    except alsaaudio.ALSAAudioError:
-      pass
 
     fd, _eventmask = self.mixer.polldescriptors()[0]
     GLib.io_add_watch(fd, GLib.IOCondition.IN, self.watch)
@@ -238,14 +231,7 @@ class Volatile:
     mute = not self.mixer.getmute()[0]
 
     self.mixer.setmute(mute)
-
-    if hasattr(self, 'headphone'):
-      self.headphone.setmute(not mute)
-      self.headphone.setmute(mute)
-
-    if hasattr(self, 'speaker'):
-      self.speaker.setmute(not mute)
-      self.speaker.setmute(mute)
+    self.update()
 
   #
   def clamp(self, value, min = 0, max = 100):
@@ -275,6 +261,7 @@ class Volatile:
   def set_level(self, level):
     volume = self.level_to_volume(level)
     self.mixer.setvolume(volume)
+    self.update()
 
   # event handler for the HScale being dragged
   def on_slide(self, widget):
@@ -344,14 +331,13 @@ class Volatile:
 if __name__ == '__main__':
   try:
     args, _ = getopt.getopt(sys.argv[1:], 'rc:m:', [
-      'reverse-scroll', 'card=', 'max-volume=', 'volatile-icons'
+      'reverse-scroll', 'max-volume=', 'volatile-icons'
     ])
   except getopt.GetoptError as err:
     print >> sys.stderr, err
     sys.exit(1)
 
   reverse = False
-  card = 0
   maxvol = 100
   vicons = False
 
@@ -359,13 +345,10 @@ if __name__ == '__main__':
     if arg in ('-r', '--reverse-scroll'):
       reverse = True
 
-    if arg in ('-c', '--card'):
-      card = int(val)
-
     if arg in ('-m', '--max-volume'):
       maxvol = min(100, max(0, int(val)))
 
     if arg in ('-v', '--volatile-icons'):
       vicons = True
 
-  volatile = Volatile(reverse, card, maxvol, vicons)
+  volatile = Volatile(reverse, maxvol, vicons)

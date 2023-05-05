@@ -1,6 +1,6 @@
 volatile
 ========
-volatile is a status icon which controls audio volume via ALSA.
+volatile is a status icon which controls audio volume via ALSA / PulseAudio.
 
 Usage
 -----
