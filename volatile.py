@@ -174,12 +174,12 @@ class Volatile:
     self.init_mixer()
 
   def on_pulse_event(self, e):
-    if e.t._value == 'new':
-      self.reinit_mixer()
+    # e.t._value
+    self.reinit_mixer()
 
   def pulse_watcher(self):
     self.pulse = Pulse('event-printer')
-    self.pulse.event_mask_set('source_output')
+    self.pulse.event_mask_set('module')
     self.pulse.event_callback_set(self.on_pulse_event)
     self.pulse.event_listen()
 
