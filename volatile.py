@@ -11,6 +11,8 @@ import signal
 import sys
 import threading
 
+from pulsectl import Pulse, _pulsectl as pulsectl
+
 import warnings
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 
@@ -42,13 +44,18 @@ class Volatile:
       self.SCROLL_BY *= -1
 
     self.init_gtk()
-    self.init_alsa()
+    self.init_mixer()
+    self.init_pulse_watcher()
 
     self.update(True)
     self.icon.set_visible(True)
 
-    signal.signal(signal.SIGINT, Gtk.main_quit)
+    signal.signal(signal.SIGINT, self.quit)
     Gtk.main()
+
+  def quit(self, sig, frame):
+    self.pulse.event_listen_stop()
+    Gtk.main_quit()
 
   # create the icon, slider and containing window
   def init_gtk(self):
@@ -151,7 +158,7 @@ class Volatile:
     context.paint()
 
   # define mixer and start watch
-  def init_alsa(self):
+  def init_mixer(self):
     try:
       self.mixer = alsaaudio.Mixer('Master', device='pulse')
 
@@ -160,7 +167,25 @@ class Volatile:
       sys.exit(2)
 
     fd, _eventmask = self.mixer.polldescriptors()[0]
-    GLib.io_add_watch(fd, GLib.IOCondition.IN, self.watch)
+    self.tag = GLib.io_add_watch(fd, GLib.IOCondition.IN, self.watch)
+
+  def reinit_mixer(self):
+    GLib.source_remove(self.tag)
+    self.init_mixer()
+
+  def on_pulse_event(self, e):
+    if e.t._value == 'new':
+      self.reinit_mixer()
+
+  def pulse_watcher(self):
+    self.pulse = Pulse('event-printer')
+    self.pulse.event_mask_set('source_output')
+    self.pulse.event_callback_set(self.on_pulse_event)
+    self.pulse.event_listen()
+
+  def init_pulse_watcher(self):
+    self.pulsectl_t = threading.Thread(target=self.pulse_watcher)
+    self.pulsectl_t.start()
 
   #
   def show_slider_window(self):
