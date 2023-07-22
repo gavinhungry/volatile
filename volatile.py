@@ -43,7 +43,10 @@ class Volatile:
     if self.REVERSE_SCROLL:
       self.SCROLL_BY *= -1
 
+    self.HEADPHONES_SINK_NAME_SUBSTRING = 'SteelSeries'
+
     self.init_gtk()
+    self.init_pulse()
     self.init_mixer()
     self.init_pulse_watcher()
 
@@ -59,6 +62,11 @@ class Volatile:
 
   # create the icon, slider and containing window
   def init_gtk(self):
+    self.headphones_icon = Gtk.StatusIcon()
+    self.headphones_icon.set_from_icon_name('headphones')
+    self.headphones_icon.set_title('volatile-headphones')
+    self.headphones_icon.set_tooltip_text('Headphones')
+
     self.icon = Gtk.StatusIcon()
     self.icon.connect('activate', self.toggle_slider_window)
     self.icon.connect('popup-menu', self.toggle_mute)
@@ -157,10 +165,18 @@ class Volatile:
 
     context.paint()
 
+  def init_pulse(self):
+    self.pulse = Pulse('volatile')
+
+    sink_name = self.pulse.server_info().default_sink_name
+    self.is_headphones = self.HEADPHONES_SINK_NAME_SUBSTRING in sink_name
+    self.sink_description = self.pulse.get_sink_by_name(sink_name).description
+
   # define mixer and start watch
   def init_mixer(self):
     try:
       self.mixer = alsaaudio.Mixer('Master', device='pulse')
+      self.init_pulse()
 
     except alsaaudio.ALSAAudioError:
       print >> sys.stderr, 'Could not initialize mixer'
@@ -321,6 +337,9 @@ class Volatile:
   def update(self, no_level = False):
     level = self.get_level()
     muted = self.mixer.getmute()[0]
+
+    self.headphones_icon.set_visible(self.is_headphones)
+    self.headphones_icon.set_tooltip_text(self.sink_description)
 
     self.slider.set_sensitive(not muted)
 
