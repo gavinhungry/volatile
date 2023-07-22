@@ -20,7 +20,8 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import GLib, Gtk, Gdk
 
 class Volatile:
-  def __init__(self, reverse, maxvol, vicons):
+  def __init__(self, headphones_icon_always, reverse, maxvol, vicons):
+    self.HEADPHONES_ICON_ALWAYS = headphones_icon_always
     self.REVERSE_SCROLL = reverse
     self.MAX_VOLUME     = maxvol
     self.VOLATILE_ICONS = vicons
@@ -338,8 +339,16 @@ class Volatile:
     level = self.get_level()
     muted = self.mixer.getmute()[0]
 
-    self.headphones_icon.set_visible(self.is_headphones)
-    self.headphones_icon.set_tooltip_text(self.sink_description)
+    if self.is_headphones:
+      self.headphones_icon.set_from_icon_name('headphones')
+      self.headphones_icon.set_tooltip_text(self.sink_description)
+    else:
+      self.headphones_icon.set_from_icon_name('headphones-inactive')
+      self.headphones_icon.set_tooltip_text('Headphones disconnected')
+
+    self.headphones_icon.set_visible(
+      self.is_headphones or self.HEADPHONES_ICON_ALWAYS
+    )
 
     self.slider.set_sensitive(not muted)
 
@@ -374,18 +383,22 @@ class Volatile:
 
 if __name__ == '__main__':
   try:
-    args, _ = getopt.getopt(sys.argv[1:], 'rc:m:', [
-      'reverse-scroll', 'max-volume=', 'volatile-icons'
+    args, _ = getopt.getopt(sys.argv[1:], 'hrm:v', [
+      'headphones-icon-always', 'reverse-scroll', 'max-volume=', 'volatile-icons'
     ])
   except getopt.GetoptError as err:
     print >> sys.stderr, err
     sys.exit(1)
 
+  headphones_icon_always = False
   reverse = False
   maxvol = 100
   vicons = False
 
   for arg, val in args:
+    if arg in ('-h', '--headphones-icon-always'):
+      headphones_icon_always = True
+
     if arg in ('-r', '--reverse-scroll'):
       reverse = True
 
@@ -395,4 +408,4 @@ if __name__ == '__main__':
     if arg in ('-v', '--volatile-icons'):
       vicons = True
 
-  volatile = Volatile(reverse, maxvol, vicons)
+  volatile = Volatile(headphones_icon_always, reverse, maxvol, vicons)
