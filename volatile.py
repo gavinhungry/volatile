@@ -363,13 +363,13 @@ class Volatile:
     if not no_level:
       self.show_level_window_with_timeout()
 
-    if level <= 0 or muted:
+    if muted:
       self.set_icon('audio-volume-muted')
-    elif level <= 20:
+    elif level <= 15:
       self.set_icon('audio-volume-off')
-    elif level <= 50:
+    elif level <= 40:
       self.set_icon('audio-volume-low')
-    elif level <= 70:
+    elif level <= 65:
       self.set_icon('audio-volume-medium')
     else:
       self.set_icon('audio-volume-high')
