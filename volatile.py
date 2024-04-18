@@ -406,7 +406,7 @@ class Volatile:
 
 if __name__ == '__main__':
   try:
-    args, _ = getopt.getopt(sys.argv[1:], 'hrm:v', [
+    args, _ = getopt.getopt(sys.argv[1:], 'hHrm:v', [
       'headphones-icon-always', 'headset-icon-always', 'reverse-scroll',
       'max-volume=', 'volatile-icons'
     ])
