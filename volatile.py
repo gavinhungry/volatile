@@ -20,8 +20,12 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import GLib, Gtk, Gdk
 
 class Volatile:
-  def __init__(self, headphones_icon_always, reverse, maxvol, vicons):
+  def __init__(self,
+    headphones_icon_always, headset_icon_always,
+    reverse, maxvol, vicons
+  ):
     self.HEADPHONES_ICON_ALWAYS = headphones_icon_always
+    self.HEADSET_ICON_ALWAYS = headset_icon_always
     self.REVERSE_SCROLL = reverse
     self.MAX_VOLUME     = maxvol
     self.VOLATILE_ICONS = vicons
@@ -44,7 +48,9 @@ class Volatile:
     if self.REVERSE_SCROLL:
       self.SCROLL_BY *= -1
 
-    self.HEADPHONES_SINK_NAME_SUBSTRING = 'SteelSeries'
+    # these should be arguments or environment variables
+    self.HEADPHONES_SINK_NAME_SUBSTRING = 'BTD_600'
+    self.HEADSET_SINK_NAME_SUBSTRING = 'SteelSeries'
 
     self.init_gtk()
     self.init_pulse()
@@ -63,15 +69,20 @@ class Volatile:
 
   # create the icon, slider and containing window
   def init_gtk(self):
+    self.icon = Gtk.StatusIcon()
+    self.icon.connect('activate', self.toggle_slider_window)
+    self.icon.connect('popup-menu', self.toggle_mute)
+    self.icon.connect('scroll-event', self.on_scroll)
+
     self.headphones_icon = Gtk.StatusIcon()
     self.headphones_icon.set_from_icon_name('headphones')
     self.headphones_icon.set_title('volatile-headphones')
     self.headphones_icon.set_tooltip_text('Headphones')
 
-    self.icon = Gtk.StatusIcon()
-    self.icon.connect('activate', self.toggle_slider_window)
-    self.icon.connect('popup-menu', self.toggle_mute)
-    self.icon.connect('scroll-event', self.on_scroll)
+    self.headset_icon = Gtk.StatusIcon()
+    self.headset_icon.set_from_icon_name('headset')
+    self.headset_icon.set_title('volatile-headset')
+    self.headset_icon.set_tooltip_text('Headset')
 
     self.screen = Gdk.Screen.get_default()
 
@@ -168,9 +179,10 @@ class Volatile:
 
   def init_pulse(self):
     self.pulse = Pulse('volatile')
-
     sink_name = self.pulse.server_info().default_sink_name
+
     self.is_headphones = self.HEADPHONES_SINK_NAME_SUBSTRING in sink_name
+    self.is_headset = self.HEADSET_SINK_NAME_SUBSTRING in sink_name
     self.sink_description = self.pulse.get_sink_by_name(sink_name).description
 
   # define mixer and start watch
@@ -350,6 +362,17 @@ class Volatile:
       self.is_headphones or self.HEADPHONES_ICON_ALWAYS
     )
 
+    if self.is_headset:
+      self.headset_icon.set_from_icon_name('headset')
+      self.headset_icon.set_tooltip_text(self.sink_description)
+    else:
+      self.headset_icon.set_from_icon_name('headset-inactive')
+      self.headset_icon.set_tooltip_text('Headset disconnected')
+
+    self.headset_icon.set_visible(
+      self.is_headset or self.HEADSET_ICON_ALWAYS
+    )
+
     self.slider.set_sensitive(not muted)
 
     if muted:
@@ -384,13 +407,15 @@ class Volatile:
 if __name__ == '__main__':
   try:
     args, _ = getopt.getopt(sys.argv[1:], 'hrm:v', [
-      'headphones-icon-always', 'reverse-scroll', 'max-volume=', 'volatile-icons'
+      'headphones-icon-always', 'headset-icon-always', 'reverse-scroll',
+      'max-volume=', 'volatile-icons'
     ])
   except getopt.GetoptError as err:
     print >> sys.stderr, err
     sys.exit(1)
 
   headphones_icon_always = False
+  headset_icon_always = False
   reverse = False
   maxvol = 100
   vicons = False
@@ -398,6 +423,9 @@ if __name__ == '__main__':
   for arg, val in args:
     if arg in ('-h', '--headphones-icon-always'):
       headphones_icon_always = True
+
+    if arg in ('-H', '--headset-icon-always'):
+      headset_icon_always = True
 
     if arg in ('-r', '--reverse-scroll'):
       reverse = True
@@ -408,4 +436,7 @@ if __name__ == '__main__':
     if arg in ('-v', '--volatile-icons'):
       vicons = True
 
-  volatile = Volatile(headphones_icon_always, reverse, maxvol, vicons)
+  volatile = Volatile(
+    headphones_icon_always, headset_icon_always,
+    reverse, maxvol, vicons
+  )
