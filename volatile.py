@@ -44,28 +44,33 @@ class Volatile:
       self.SCROLL_BY *= -1
 
     self.init_gtk()
-    self.init_pulse()
     self.init_mixer()
     self.init_pulse_watcher()
 
     self.update(True)
     self.icon.set_visible(True)
 
-    signal.signal(signal.SIGINT, self.quit)
+    GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, self.quit, None)
     Gtk.main()
 
-  def quit(self, sig, frame):
-    self.pulse.event_listen_stop()
+  def quit(self, *args):
+    try:
+      self.pulse_watcher.event_listen_stop()
+    except Exception:
+      pass
+
     Gtk.main_quit()
+    return False
 
   # create the icon, slider and containing window
   def init_gtk(self):
     self.icon = Gtk.StatusIcon()
     self.icon.connect('activate', self.toggle_slider_window)
-    self.icon.connect('popup-menu', self.toggle_mute)
+    self.icon.connect('popup-menu', self.on_context_click)
     self.icon.connect('scroll-event', self.on_scroll)
 
     self.screen = Gdk.Screen.get_default()
+    self.root_window = self.screen.get_root_window()
 
     self.slider = Gtk.HScale()
     self.slider.set_can_focus(False)
@@ -158,11 +163,17 @@ class Volatile:
 
     context.paint()
 
-  def init_pulse(self):
-    self.pulse = Pulse('volatile')
-    sink_name = self.pulse.server_info().default_sink_name
+  def get_default_sink_name(self):
+    with Pulse('volatile') as pulse:
+      return pulse.server_info().default_sink_name
 
-    self.sink_description = self.pulse.get_sink_by_name(sink_name).description
+  #
+  def init_pulse(self):
+    with Pulse('volatile') as pulse:
+      self.sink_name = self.get_default_sink_name()
+
+      sink = pulse.get_sink_by_name(self.sink_name)
+      self.sink_description = sink.description
 
   # define mixer and start watch
   def init_mixer(self):
@@ -177,20 +188,27 @@ class Volatile:
     fd, _eventmask = self.mixer.polldescriptors()[0]
     self.tag = GLib.io_add_watch(fd, GLib.IOCondition.IN, self.watch)
 
+  #
   def reinit_mixer(self):
+    if getattr(self, 'sink_name', None) == self.get_default_sink_name():
+      return
+
     GLib.source_remove(self.tag)
     self.init_mixer()
 
+  #
   def on_pulse_event(self, e):
     # e.t._value
     self.reinit_mixer()
 
+  #
   def pulse_watcher(self):
-    self.pulse = Pulse('event-printer')
-    self.pulse.event_mask_set('module')
-    self.pulse.event_callback_set(self.on_pulse_event)
-    self.pulse.event_listen()
+    self.pulse_watcher = Pulse('event-printer')
+    self.pulse_watcher.event_mask_set('sink')
+    self.pulse_watcher.event_callback_set(self.on_pulse_event)
+    self.pulse_watcher.event_listen()
 
+  #
   def init_pulse_watcher(self):
     self.pulsectl_t = threading.Thread(target=self.pulse_watcher)
     self.pulsectl_t.start()
@@ -220,17 +238,52 @@ class Volatile:
       self.show_slider_window()
 
   #
+  def on_context_click(self, widget, button, time):
+    _, _, _, state = self.root_window.get_pointer()
+
+    is_ctrl_down = bool(state & Gdk.ModifierType.CONTROL_MASK)
+    if is_ctrl_down:
+      self.show_sink_menu(button, time)
+    else:
+      self.toggle_mute(widget, button, time)
+
+  #
+  def show_sink_menu(self, button, time):
+    menu = Gtk.Menu()
+
+    with Pulse('volatile-menu') as pulse:
+      sinks = pulse.sink_list()
+      default_name = pulse.server_info().default_sink_name
+
+    for sink in sinks:
+      is_default = sink.name == default_name
+
+      item = Gtk.CheckMenuItem(label=sink.description)
+      if not is_default:
+        item.connect('activate', self.on_sink_selected, sink.name)
+
+      item.set_active(is_default)
+      menu.append(item)
+
+    menu.show_all()
+    menu.popup(None, None, None, None, button, time)
+
+  #
+  def on_sink_selected(self, widget, sink_name):
+    with Pulse('volatile-set') as pulse:
+      pulse.sink_default_set(sink_name)
+
+  #
   def show_level_window(self):
     if self.level_window.get_property('visible'):
       return
 
     self.level_window.set_position(Gtk.WindowPosition.CENTER)
-
-
     self.level_window.move(
       ((self.screen.get_width() - self.LEVEL_WIDTH) / 2) - self.LEVEL_PADDING,
       1480
     )
+
     self.level_window.show_all()
     self.level_window.present()
 
