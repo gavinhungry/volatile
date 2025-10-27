@@ -7,6 +7,8 @@
 import alsaaudio
 import getopt
 import gi
+import json
+import os
 import signal
 import sys
 import threading
@@ -18,6 +20,8 @@ warnings.filterwarnings('ignore', category=DeprecationWarning)
 
 gi.require_version('Gtk', '3.0')
 from gi.repository import GLib, Gtk, Gdk
+
+home_dir = os.environ.get('HOME')
 
 class Volatile:
   def __init__(self, reverse, maxvol, vicons):
@@ -64,6 +68,12 @@ class Volatile:
 
   # create the icon, slider and containing window
   def init_gtk(self):
+    try:
+      with open(os.path.join(home_dir, '.volatile.json'), 'r') as f:
+        self.sink_map = json.load(f)
+    except:
+      self.sink_map = {}
+
     self.icon = Gtk.StatusIcon()
     self.icon.connect('activate', self.toggle_slider_window)
     self.icon.connect('popup-menu', self.on_context_click)
@@ -152,6 +162,9 @@ class Volatile:
       Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
     )
 
+  def map_sink_desc(self, sink_description):
+    return self.sink_map.get(sink_description, sink_description)
+
   # paint transparent background (supports compositing/blur)
   def draw_level(self, widget, context):
     context.set_source_rgba(
@@ -173,7 +186,7 @@ class Volatile:
       self.sink_name = self.get_default_sink_name()
 
       sink = pulse.get_sink_by_name(self.sink_name)
-      self.sink_description = sink.description
+      self.sink_description = self.map_sink_desc(sink.description)
 
   # define mixer and start watch
   def init_mixer(self):
@@ -257,8 +270,9 @@ class Volatile:
 
     for sink in sinks:
       is_default = sink.name == default_name
+      mapped_sink_desc = self.map_sink_desc(sink.description)
 
-      item = Gtk.CheckMenuItem(label=sink.description)
+      item = Gtk.CheckMenuItem(label=mapped_sink_desc)
       if not is_default:
         item.connect('activate', self.on_sink_selected, sink.name)
 
