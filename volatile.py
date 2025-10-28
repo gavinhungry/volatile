@@ -268,6 +268,10 @@ class Volatile:
       sinks = pulse.sink_list()
       default_name = pulse.server_info().default_sink_name
 
+    sinks = sorted(sinks,
+      key=lambda sink: self.map_sink_desc(sink.description).lower()
+    )
+
     for sink in sinks:
       is_default = sink.name == default_name
       mapped_sink_desc = self.map_sink_desc(sink.description)
