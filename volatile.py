@@ -256,9 +256,9 @@ class Volatile:
 
     is_ctrl_down = bool(state & Gdk.ModifierType.CONTROL_MASK)
     if is_ctrl_down:
-      self.show_sink_menu(button, time)
-    else:
       self.toggle_mute(widget, button, time)
+    else:
+      self.show_sink_menu(button, time)
 
   #
   def show_sink_menu(self, button, time):
