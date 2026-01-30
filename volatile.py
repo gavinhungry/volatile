@@ -284,7 +284,11 @@ class Volatile:
       menu.append(item)
 
     menu.show_all()
-    menu.popup(None, None, None, None, button, time)
+    menu.popup(
+      None, None,
+      Gtk.StatusIcon.position_menu, self.icon,
+      button, time
+    )
 
   #
   def on_sink_selected(self, widget, sink_name):
