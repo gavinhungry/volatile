@@ -13,7 +13,7 @@ import signal
 import sys
 import threading
 
-from pulsectl import Pulse, _pulsectl as pulsectl
+from pulsectl import Pulse
 
 import warnings
 warnings.filterwarnings('ignore', category=DeprecationWarning)
@@ -80,8 +80,6 @@ class Volatile:
     self.icon.connect('scroll-event', self.on_scroll)
 
     self.screen = Gdk.Screen.get_default()
-    self.root_window = self.screen.get_root_window()
-
     self.slider = Gtk.HScale()
     self.slider.set_can_focus(False)
     self.slider.set_size_request(self.SLIDER_WIDTH, self.SLIDER_HEIGHT)
@@ -252,17 +250,23 @@ class Volatile:
 
   #
   def on_context_click(self, widget, button, time):
-    _, _, _, state = self.root_window.get_pointer()
+    self.show_sink_menu(button, time)
 
-    is_ctrl_down = bool(state & Gdk.ModifierType.CONTROL_MASK)
-    if is_ctrl_down:
-      self.toggle_mute(widget, button, time)
-    else:
-      self.show_sink_menu(button, time)
+  #
+  def on_mute_menu_toggled(self, widget):
+    self.mixer.setmute(widget.get_active())
+    self.update()
 
   #
   def show_sink_menu(self, button, time):
     menu = Gtk.Menu()
+
+    muted = self.mixer.getmute()[0]
+    mute_item = Gtk.CheckMenuItem(label='Mute')
+    mute_item.set_active(muted)
+    mute_item.connect('toggled', self.on_mute_menu_toggled)
+    menu.append(mute_item)
+    menu.append(Gtk.SeparatorMenuItem())
 
     with Pulse('volatile-menu') as pulse:
       sinks = pulse.sink_list()
@@ -272,16 +276,20 @@ class Volatile:
       key=lambda sink: self.map_sink_desc(sink.description).lower()
     )
 
+    group = []
+    items = []
     for sink in sinks:
       is_default = sink.name == default_name
       mapped_sink_desc = self.map_sink_desc(sink.description)
 
-      item = Gtk.CheckMenuItem(label=mapped_sink_desc)
-      if not is_default:
-        item.connect('activate', self.on_sink_selected, sink.name)
-
+      item = Gtk.RadioMenuItem(label=mapped_sink_desc, group=group[0] if group else None)
       item.set_active(is_default)
+      group.append(item)
+      items.append((item, sink.name))
       menu.append(item)
+
+    for item, sink_name in items:
+      item.connect('activate', self.on_sink_selected, sink_name)
 
     menu.show_all()
     menu.popup(
@@ -326,20 +334,6 @@ class Volatile:
   #
   def hide_level_window(self):
     self.level_window.hide()
-
-  #
-  def toggle_level_window(self):
-    if self.level_window.get_property('visible'):
-      self.hide_level_window()
-    else:
-      self.show_level_window()
-
-  # toggle current mute state
-  def toggle_mute(self, widget, button, time):
-    mute = not self.mixer.getmute()[0]
-
-    self.mixer.setmute(mute)
-    self.update()
 
   #
   def clamp(self, value, min = 0, max = 100):
